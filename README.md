@@ -1,51 +1,420 @@
-# TuringOne — Community Edition
+<div align="center">
 
-Plateforme de QA augmentée par l'IA : génération de cas de test API, exécution
-E2E API et gestion des exigences, en auto-hébergé.
+# TuringOne Community
 
-## 🚀 Installation en un clic
+**Self-hosted AI-powered UI test automation.**
+Generate, run and report Playwright tests — from your own infrastructure.
 
-Toute la stack (PostgreSQL + pgvector, Keycloak, MinIO, RabbitMQ, Redis,
-backend, worker, frontend) s'installe et se configure automatiquement :
+[![Docker](https://img.shields.io/badge/Docker-Compose%20v2-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![Playwright](https://img.shields.io/badge/Playwright-Cucumber-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
+[![Keycloak](https://img.shields.io/badge/Auth-Keycloak-4D4D4D?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+[![License](https://img.shields.io/badge/License-TuringOne%20Community-blue)](LICENSE)
+
+<img src="docs/screenshots/01-dashboard.png" alt="TuringOne Community — UI dashboard" width="880">
+
+</div>
+
+---
+
+## Table of contents
+
+- [Why TuringOne Community](#why-turingone-community)
+- [What you get](#what-you-get)
+- [Architecture](#architecture)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [First login](#first-login)
+- [Using it](#using-it)
+  - [1 · Prepare your project](#1--prepare-your-project)
+  - [2 · Generate UI test cases](#2--generate-ui-test-cases)
+  - [3 · Build a test plan](#3--build-a-test-plan)
+  - [4 · Run tests on your machine](#4--run-tests-on-your-machine)
+- [Configuration](#configuration)
+- [Operations](#operations)
+- [Troubleshooting](#troubleshooting)
+- [Security](#security)
+- [License](#license)
+
+---
+
+## Why TuringOne Community
+
+Most test automation platforms make you choose: either a SaaS that never sees your
+internal apps, or a CI runner you are not allowed to install.
+
+TuringOne Community takes a third path — **the platform runs on your infrastructure,
+and the tests run on your laptop.** No CI runner, no agent, no Docker on the tester's
+machine, no administrator rights.
+
+| | |
+|---|---|
+| 🧠 **AI test generation** | Turn requirements and documents into UI test cases — one click |
+| 🖥️ **Zero-install execution** | Tests run locally through a script that ships with your workspace |
+| 🔒 **Fully self-hosted** | Your data, your database, your network. Nothing leaves your infrastructure except the LLM calls you configure |
+| 🔌 **Bring your own LLM** | Any OpenAI-compatible endpoint — Groq, OpenAI, vLLM, Ollama |
+| 📊 **Reports & traceability** | Screenshots, step-level results, requirement coverage |
+
+---
+
+## What you get
+
+`docker compose up` gives you six services:
+
+| Service | Role | Exposed |
+|---|---|---|
+| **frontend** | Vue 3 SPA served by Nginx | `:5173` |
+| **backend** | FastAPI — projects, generation, executions | `:8000` |
+| **keycloak** | Authentication (OIDC) | `:8080` |
+| **postgres** | PostgreSQL 16 + pgvector — all application data | internal only |
+| **minio** | S3-compatible storage for artifacts | internal only |
+| **redis** | Cache | internal only |
+
+> **Databases are never exposed.** PostgreSQL, MinIO and Redis sit on an
+> `internal: true` Docker network with no published ports — unreachable from the
+> host or the internet by design.
+
+---
+
+## Architecture
+
+```
+                 YOUR SERVER (Docker)                    YOUR LAPTOP
+   ┌────────────────────────────────────────┐   ┌──────────────────────────┐
+   │  frontend ── backend ── postgres       │   │  TuringOne workspace     │
+   │                 │        minio         │   │   (downloaded once)      │
+   │                 │        redis         │   │                          │
+   │              keycloak                  │   │  Run Turing One Tests    │
+   └─────────────────┬──────────────────────┘   │        │                 │
+                     │                          │        ▼                 │
+                     │  ① prepare run           │  execution_launcher.py   │
+                     │◄─────────────────────────┤  ② claim next execution  │
+                     │                          │  ③ pre-flight check      │
+                     │                          │        │                 │
+                     │                          │        ▼                 │
+                     │                          │  run.py → Playwright     │
+                     │  ④ progress + results    │        │                 │
+                     │◄─────────────────────────┤  ⑤ report back           │
+                     └──────────────────────────┴──────────────────────────┘
+```
+
+The laptop **pulls** work from the server — it never listens on a port and never
+needs an inbound connection. That is what makes it work behind corporate proxies
+and locked-down desktops.
+
+---
+
+## Requirements
+
+| | Minimum | Recommended |
+|---|---|---|
+| Docker | Engine 24 + Compose v2 | Docker Desktop 4.30+ |
+| RAM | 6 GB free | 8 GB |
+| Disk | 10 GB free | 20 GB |
+| OS | Linux, macOS, Windows (WSL2) | — |
+
+For running tests locally you also need **Node.js 18+** and **Python 3.9+** on the
+tester's machine. Both are usually already present, and neither requires
+administrator rights.
+
+---
+
+## Quick start
 
 ```bash
-# Linux / macOS
-cd deploy/community && ./install.sh
+git clone https://github.com/aabouda/turingone-ui-community.git
+cd turingone-ui-community
+./install.sh
 ```
+
+On Windows (PowerShell):
 
 ```powershell
-# Windows
-cd deploy\community ; .\install.ps1
+.\install.ps1
 ```
 
-Puis ouvrez **http://community.localhost:5173**.
+The installer:
 
-📖 Documentation complète : [deploy/community/README.md](deploy/community/README.md)
-🔐 Sécurité & modèle de menace : [deploy/community/SECURITY.md](deploy/community/SECURITY.md)
+1. generates `.env` with strong random secrets (file mode `600`)
+2. pulls the images (~2 GB, 5–15 min on first run)
+3. starts the stack
+4. provisions databases, the Keycloak realm, storage buckets and the admin user
 
-## Ce que fait l'installation automatique
+When it finishes, open **<http://community.localhost:5173>**.
 
-- Génère des secrets forts (aucun mot de passe par défaut) ;
-- Crée les bases de données, le schéma, l'extension pgvector ;
-- Provisionne le tenant, la licence `community` et les quotas de points IA ;
-- Configure Keycloak (realm, clients OIDC, thème, compte administrateur) ;
-- Crée les buckets S3 (MinIO local — aucune dépendance AWS) ;
-- Chiffre les credentials par projet en RSA-4096/AES-256-GCM avec un
-  provider de clés **local** (`KMS_PROVIDER=local`) protégé par la master key
-  d'installation.
+> ⚠️ **Back up your `.env`.** It contains `TURINGONE_MASTER_KEY`, without which your
+> encrypted data cannot be recovered. It is git-ignored on purpose.
 
-## Structure du dépôt
+<img src="docs/screenshots/02-install.png" alt="Installation output" width="820">
 
-| Dossier | Contenu |
+---
+
+## First login
+
+Credentials are generated during installation. Read them from your `.env`:
+
+```bash
+grep -E 'TURINGONE_ADMIN_(USERNAME|PASSWORD)' .env
+```
+
+| | |
 |---|---|
-| `backend/` | API FastAPI, workers, moteur IA |
-| `frontend/` | SPA Vue 3 (Vite + PrimeVue) |
-| `deploy/community/` | Stack Docker Compose one-click + bootstrap + docs |
-| `themes/` | Thème de login Keycloak |
+| URL | <http://community.localhost:5173> |
+| Username | `admin` |
+| Password | value of `TURINGONE_ADMIN_PASSWORD` |
 
-## Limites de l'édition community
+The Keycloak admin console lives at <http://localhost:8080> with
+`KEYCLOAK_USERNAME_ADMIN` / `KEYCLOAK_PASSWORD_ADMIN` — a **separate** account,
+for identity administration only.
 
-Plan `community` : 2 utilisateurs, 2 projets, 2 000 points IA / mois —
-génération de tests API, tests E2E API, gestion des exigences.
-Les éditions commerciales (Starter/Pro/Scale/Enterprise) ajoutent les tests UI,
-les rapports IA avancés, l'analytique et le support dédié.
+On first login you are asked to complete your profile (first name, last name,
+email, company).
+
+---
+
+## Using it
+
+### 1 · Prepare your project
+
+Create a project, then open it. The **UI Test Preparation** assistant checks
+everything the generator needs and tells you what is missing:
+
+- project text context
+- at least one valid environment
+- Test Management configuration
+- CI/CD configuration
+- at least one project document
+
+<img src="docs/screenshots/03-preparation.png" alt="UI test preparation checklist" width="820">
+
+### 2 · Generate UI test cases
+
+Click **Generating UI test cases** in the project menu. TuringOne runs a single
+job that produces the three UI categories — end-to-end, system and
+non-regression — over the whole project scope, then **validates them
+automatically**. No manual review step, no draft to approve.
+
+Test cases already present are never regenerated: they are matched on normalised
+title, test type and module.
+
+<img src="docs/screenshots/04-generation.png" alt="Generated UI test cases" width="820">
+
+### 3 · Build a test plan
+
+Create a test plan, assign the test cases you want, and pick an environment.
+
+<img src="docs/screenshots/05-test-plan.png" alt="UI test plan" width="820">
+
+### 4 · Run tests on your machine
+
+This is where TuringOne Community differs from every CI-based tool.
+
+**Once per machine** — click **Download Workspace**. You get a 1 MB archive
+containing the Playwright framework, your tests, and a one-time pairing code.
+Unzip it and double-click:
+
+| OS | File |
+|---|---|
+| Windows | `Run Turing One Tests.bat` |
+| macOS | `Run Turing One Tests.command` |
+| Linux | `./run-turingone-tests.sh` |
+
+The launcher connects itself — **nothing to type, nothing to install.** On first
+run it also fetches the npm dependencies and the Chromium browser.
+
+**For every run afterwards** — click **Prepare Run** in TuringOne, then launch the
+same file. The launcher claims the pending execution, runs a pre-flight check,
+starts Playwright and streams progress back to the UI.
+
+```
+==============================================================
+  TuringOne — UI test execution
+==============================================================
+  [OK]  Connected to project 1
+
+  [OK]  Execution found
+  Execution #12 · Regression Checkout · QA · 34 tests
+
+  [ENTER] run   [Q] cancel
+
+  [OK]  Framework      [OK]  Node.js        [OK]  Dependencies
+  [OK]  Playwright     [OK]  Test Plan      [OK]  Environment
+  Environment ready.
+```
+
+<img src="docs/screenshots/06-execution.png" alt="Live execution progress" width="820">
+<img src="docs/screenshots/07-report.png" alt="Execution report" width="820">
+
+---
+
+## Configuration
+
+Everything lives in `.env`. Start from `.env.example`; the installer creates it
+for you and fills the secrets.
+
+### LLM provider — required for AI features
+
+Point TuringOne at **any** OpenAI-compatible endpoint. These three variables
+override every internal tier at once:
+
+```env
+LLM_API_URL=https://api.groq.com/openai/v1
+LLM_API_TOKEN=gsk_...
+LLM_MODEL=llama-3.3-70b-versatile
+```
+
+| Provider | `LLM_API_URL` | Example model |
+|---|---|---|
+| Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+| Ollama (local) | `http://host.docker.internal:11434/v1` | `llama3` |
+| vLLM (self-hosted) | `http://your-server:8000/v1` | your served model |
+
+Verify the connection at any time:
+
+```bash
+docker exec turingone-community-backend-1 python -c "
+from common.ollama_client import get_llm_client
+c, m = get_llm_client('vllm_chat')
+print(c.chat.completions.create(model=m,
+      messages=[{'role':'user','content':'Say OK'}], max_tokens=5).choices[0].message.content)"
+```
+
+### Other useful settings
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `FRONTEND_PORT` | `5173` | Web UI port |
+| `BACKEND_PORT` | `8000` | API port |
+| `KEYCLOAK_PORT` | `8080` | Identity server port |
+| `COMMUNITY_MAX_TEST_CASES_PER_PROJECT` | `15` | Test-case quota per project (`0` = unlimited) |
+| `TURINGONE_PAIRING_TTL_MINUTES` | `10080` | Workspace pairing code lifetime (7 days) |
+| `RABBITMQ_ENABLED` | `false` | Message broker — not needed for local execution |
+| `TURINGONE_BACKEND_IMAGE` | `ghcr.io/…` | Override to use your own registry |
+| `TURINGONE_FRONTEND_IMAGE` | `ghcr.io/…` | Override to use your own registry |
+
+Changing a variable requires no rebuild:
+
+```bash
+docker compose up -d --force-recreate backend frontend
+```
+
+---
+
+## Operations
+
+```bash
+# Status
+docker compose ps
+
+# Restart after a machine reboot
+docker compose restart
+
+# Update to a newer release
+docker compose pull && docker compose up -d
+
+# Follow the logs
+docker compose logs -f backend
+
+# Stop (data is preserved)
+docker compose down
+
+# Re-run provisioning — idempotent, safe at any time
+docker compose run --rm bootstrap
+```
+
+**Backup.** Three things matter: your `.env` file, the `pgdata` volume and the
+`miniodata` volume.
+
+```bash
+docker run --rm -v turingone-community_pgdata:/data -v "$PWD":/backup \
+  alpine tar czf /backup/pgdata-$(date +%F).tar.gz -C /data .
+```
+
+> `docker compose down -v` **destroys every volume** — all projects, tests and
+> users. Only use it for a deliberate reset, then re-run `./install.sh`.
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><b>Keycloak reports unhealthy and the bootstrap fails</b></summary>
+
+Usually a PostgreSQL volume left over from an earlier, incomplete install. The
+`keycloak` database role never got created, and the init script only runs on an
+**empty** volume.
+
+```bash
+docker compose down
+docker volume rm turingone-community_pgdata
+./install.sh
+```
+</details>
+
+<details>
+<summary><b>The backend takes a long time to become healthy</b></summary>
+
+Normal on first boot: it downloads the embedding models. `start_period` is set to
+180 s. Watch it with `docker compose logs -f backend`.
+</details>
+
+<details>
+<summary><b>AI generation returns an empty or degraded result</b></summary>
+
+Almost always an LLM configuration issue. Run the verification snippet from the
+[Configuration](#configuration) section. A `401` means the key is wrong, a `404
+model_not_found` means `LLM_MODEL` is not served by that provider.
+</details>
+
+<details>
+<summary><b>The launcher says the pairing code expired</b></summary>
+
+The code is single-use. If the workspace was already paired, or the code was
+consumed, download the workspace again from **Test Plan → Run → Download
+Workspace**.
+</details>
+
+<details>
+<summary><b>"Workspace not connected" even after running the script</b></summary>
+
+Make sure you launched the script from the folder you just unzipped. A browser
+that downloads the archive twice creates a second folder, and the old one still
+carries the consumed pairing code.
+</details>
+
+<details>
+<summary><b>I need to inspect the database</b></summary>
+
+PostgreSQL is not exposed on purpose. Use the container:
+
+```bash
+docker compose exec postgres psql -U turingone -d community
+```
+</details>
+
+---
+
+## Security
+
+- Databases and object storage have **no published ports** — `internal: true` network.
+- All secrets are generated at install time, stored in `.env` with mode `600`, and
+  git-ignored.
+- The workspace token used by the local launcher is **per project, revocable, and
+  stored only as a SHA-256 hash** server-side.
+- Nothing is written to a Git repository; the whole local-execution flow works
+  without Git, without Docker on the tester's machine, and without CI.
+
+Found a vulnerability? See [SECURITY.md](SECURITY.md).
+
+---
+
+## License
+
+TuringOne Community Edition — see [LICENSE](LICENSE).
+
+Free to install and use inside your organisation, including commercially.
+Offering it to third parties as a hosted service requires a separate agreement.
+
+<div align="center">
+<sub>Built with FastAPI · Vue 3 · Playwright · Keycloak · PostgreSQL + pgvector</sub>
+</div>

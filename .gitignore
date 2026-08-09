@@ -1,0 +1,7 @@
+# Secrets générés à l'installation — ne doivent JAMAIS être versionnés
+.env
+.env.local
+
+# Données et artefacts locaux
+*.log
+.DS_Store

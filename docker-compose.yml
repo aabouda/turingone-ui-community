@@ -1,0 +1,223 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# TuringOne — Community Edition (auto-hébergée)
+#
+# Démarrage en un clic :   ./install.sh   (Linux/macOS)   ou   .\install.ps1 (Windows)
+# ou manuellement :        cp .env.example .env  → renseigner les secrets
+#                          docker compose up -d --build
+#
+# Architecture réseau (défense en profondeur) :
+#   - réseau "edge"     : services accessibles depuis le navigateur
+#                         (frontend, backend, keycloak) — ports publiés.
+#   - réseau "internal" : données uniquement (postgres, minio, redis)
+#                         internal: true → AUCUN accès depuis l'hôte ni Internet.
+#
+# Aucune base de données ni stockage n'est exposé : l'utilisateur final ne peut
+# pas se connecter à PostgreSQL / MinIO / RabbitMQ depuis l'extérieur.
+# ═════════════════════════════════════════════════════════════════════════════
+
+name: turingone-community
+
+networks:
+  edge:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true          # pas de route sortante ni d'exposition hôte
+
+volumes:
+  pgdata:                   # données PostgreSQL (toutes les bases)
+  miniodata:                # objets S3 (MinIO)
+  redisdata:                # cache Redis
+  appdata:                  # données applicatives backend (/data : cache HF, S3 cache, documents…)
+
+services:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # PostgreSQL 16 + pgvector (image officielle pgvector)
+  # Bases créées au premier démarrage par postgres/init/01-init-databases.sh :
+  #   - keycloak            (realm/utilisateurs Keycloak)
+  #   - ${BILLING_DATABASE_NAME}  (billing : tenants, licences, quotas IA)
+  #   - ${TENANT_NAME}      (base tenant : projets, exigences, tests… + pgvector)
+  # ───────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    networks: [internal]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?POSTGRES_SUPERUSER_PASSWORD manquant — lancez install.sh}
+      POSTGRES_DB: postgres
+      # Variables consommées par le script d'init (premier démarrage uniquement)
+      APP_DB_USER: ${DATABASE_USER:-turingone}
+      APP_DB_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD manquant}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?KC_DB_PASSWORD manquant}
+      TENANT_NAME: ${TENANT_NAME:-community}
+      BILLING_DATABASE_NAME: ${BILLING_DATABASE_NAME:-turingone}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Sécurité : pas de "ports:" — la base n'est PAS accessible depuis l'hôte.
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Keycloak (authentification OIDC) — thème TuringOne monté en lecture seule.
+  # Le realm ${TENANT_NAME}, les clients et l'admin applicatif sont créés
+  # automatiquement par le service "bootstrap" via l'Admin API.
+  # ───────────────────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.3
+    restart: unless-stopped
+    command: ["start", "--http-enabled=true", "--hostname-strict=false"]
+    networks: [edge, internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_USERNAME_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD_ADMIN:?KEYCLOAK_PASSWORD_ADMIN manquant}
+      KC_HEALTH_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      # Le thème "turingone" est appliqué PAR REALM par le bootstrap (loginTheme),
+      # pas au niveau serveur — le realm master garde le thème Keycloak standard.
+      KC_SPI_THEME_CACHE_ENABLED: "false"
+    volumes:
+      - ./themes:/opt/keycloak/themes:ro
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    healthcheck:
+      # L'image Keycloak n'embarque pas curl : test HTTP via bash /dev/tcp
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q 'UP' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # MinIO — serveur S3 local (remplace AWS S3).
+  # Le backend l'utilise via S3_ENDPOINT=http://minio:9000 (boto3, endpoint_url).
+  # Les buckets sont créés automatiquement par le service "bootstrap".
+  # ───────────────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data"]
+    networks: [internal]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY manquant}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY manquant}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      # 'mc' est embarqué dans l'image serveur MinIO (curl n'y existe plus)
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Sécurité : pas de "ports:" — le stockage n'est PAS accessible depuis l'hôte.
+    # Pour ouvrir la console d'admin MinIO (debug uniquement), ajouter :
+    #   command: ["server", "/data", "--console-address", ":9001"]
+    #   ports: ["9001:9001"]   — puis la retirer en production.
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # RabbitMQ — bus de messages (génération asynchrone des détails de cas de test).
+  # Les exchanges/queues sont déclarés par les producteurs — aucun provisioning.
+  # ───────────────────────────────────────────────────────────────────────────
+  # ───────────────────────────────────────────────────────────────────────────
+  # Redis — cache des réponses LLM (optionnel : dégradation propre si absent).
+  # ───────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [internal]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Bootstrap — provisioning one-shot, idempotent (relançable sans risque) :
+  #   1. attend Postgres / Keycloak / MinIO
+  #   2. crée le schéma tenant (SQLAlchemy create_all + migrations colonnes
+  #      + ai_points_events) et le schéma billing (+ seed des plans)
+  #   3. provisionne le tenant + licence "community" + lien tenant_link
+  #   4. crée les buckets MinIO
+  #   5. crée le realm Keycloak, les clients OIDC, le rôle admin et
+  #      l'utilisateur administrateur applicatif
+  # Utilise l'image backend (mêmes dépendances Python, même code modèle).
+  # ───────────────────────────────────────────────────────────────────────────
+  bootstrap:
+    image: ${TURINGONE_BACKEND_IMAGE:-ghcr.io/aabouda/turingone-backend-community:latest}
+    restart: "no"
+    networks: [internal]     # ne parle qu'aux services internes — pas d'Internet
+    env_file: .env
+    environment:
+      DOCKER_CONTAINER: "1"
+    command: ["python", "/bootstrap/bootstrap.py"]
+    volumes:
+      - ./bootstrap:/bootstrap:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backend — API FastAPI (uvicorn, port 8000).
+  # Image durcie : bytecode uniquement (pas de sources .py), non-root,
+  # données inscriptibles limitées au volume /data.
+  # ───────────────────────────────────────────────────────────────────────────
+  backend:
+    image: ${TURINGONE_BACKEND_IMAGE:-ghcr.io/aabouda/turingone-backend-community:latest}
+    restart: unless-stopped
+    networks: [edge, internal]
+    env_file: .env
+    environment:
+      DOCKER_CONTAINER: "1"
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - appdata:/data
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s   # premier boot : téléchargement des modèles d'embeddings
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Frontend — SPA Vue 3 servie par Nginx.
+  # Les URLs backend/Keycloak sont injectées AU DÉMARRAGE du conteneur
+  # (placeholders substitués par docker/40-runtime-env.sh) : la même image
+  # fonctionne pour n'importe quelle installation, sans rebuild.
+  # ───────────────────────────────────────────────────────────────────────────
+  frontend:
+    image: ${TURINGONE_FRONTEND_IMAGE:-ghcr.io/aabouda/turingone-frontend-community:latest}
+    restart: unless-stopped
+    networks: [edge]
+    environment:
+      API_BASE_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+      KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_started

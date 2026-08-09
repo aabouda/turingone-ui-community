@@ -1,0 +1,96 @@
+TuringOne Community Edition License
+====================================
+
+Copyright (c) 2026 TuringOne. All rights reserved.
+
+This repository contains the deployment configuration for TuringOne Community
+Edition ("the Software"). The Software, including the container images it
+references, is proprietary to TuringOne.
+
+
+1. Grant of licence
+-------------------
+
+TuringOne grants you a worldwide, royalty-free, non-exclusive, non-transferable
+licence to:
+
+  a) install, run and use the Software for your own internal purposes,
+     including commercial use within your organisation;
+
+  b) copy and redistribute the contents of this repository unmodified,
+     provided this licence is included and attribution to TuringOne is
+     preserved;
+
+  c) modify the deployment configuration (compose files, environment files,
+     installation scripts) as required to operate the Software in your own
+     environment.
+
+
+2. Restrictions
+---------------
+
+You may not:
+
+  a) offer the Software to third parties as a hosted or managed service;
+
+  b) reverse engineer, decompile or disassemble the container images, except
+     to the extent such restriction is prohibited by applicable law;
+
+  c) remove or alter any copyright, trademark or attribution notice;
+
+  d) use the TuringOne name, logo or trademarks to endorse or promote products
+     derived from the Software without prior written permission.
+
+
+3. Third-party components
+-------------------------
+
+The Software runs alongside independent open-source components — including
+PostgreSQL, Keycloak, MinIO, Redis and Playwright — each distributed under its
+own licence. Nothing in this licence modifies your rights or obligations under
+those licences.
+
+
+4. Data
+-------
+
+TuringOne Community Edition is self-hosted: your data remains in your own
+infrastructure. TuringOne does not access it. Where you configure an external
+service — such as a large language model provider — data you send to that
+service is governed by that provider's own terms.
+
+
+5. No warranty
+--------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+
+6. Limitation of liability
+--------------------------
+
+IN NO EVENT SHALL TURINGONE BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+
+7. Termination
+--------------
+
+This licence terminates automatically if you breach any of its terms. On
+termination you must cease using the Software and destroy all copies in your
+possession.
+
+
+8. Enterprise Edition
+---------------------
+
+Additional capabilities — remote and distributed execution, scheduling,
+centralised secrets management, advanced governance — are available under a
+separate commercial agreement. Contact TuringOne for terms.
+
+
+---
+Questions about this licence: contact TuringOne.

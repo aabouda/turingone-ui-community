@@ -3,7 +3,13 @@
 # TuringOne Community
 
 **Self-hosted AI-powered UI test automation.**
-Generate, run and report Playwright tests — from your own infrastructure.
+
+`Generate` → `Prepare` → `Execute` → `Report`
+
+TuringOne Community generates and manages your UI tests centrally,
+while execution remains inside your authorized environment.
+
+*No dedicated CI runner. No persistent agent. No Docker required for test execution.*
 
 [![Docker](https://img.shields.io/badge/Docker-Compose%20v2-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Playwright](https://img.shields.io/badge/Playwright-Cucumber-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
@@ -28,7 +34,7 @@ Generate, run and report Playwright tests — from your own infrastructure.
   - [1 · Prepare your project](#1--prepare-your-project)
   - [2 · Generate UI test cases](#2--generate-ui-test-cases)
   - [3 · Build a test plan](#3--build-a-test-plan)
-  - [4 · Run tests on your machine](#4--run-tests-on-your-machine)
+  - [4 · Execute tests from your environment](#4--execute-tests-from-your-environment)
 - [Configuration](#configuration)
 - [Operations](#operations)
 - [Troubleshooting](#troubleshooting)
@@ -39,22 +45,25 @@ Generate, run and report Playwright tests — from your own infrastructure.
 
 ## Why TuringOne Community
 
-Most test automation platforms make you choose: either a SaaS that never sees your
-internal apps, or a CI runner you are not allowed to install.
+Enterprise test automation often needs to operate within strict infrastructure,
+security and network constraints. Test execution may need to remain inside the
+target environment, while installing dedicated CI runners or persistent agents is
+not always possible.
 
-TuringOne Community takes a third path — **the platform runs on your infrastructure,
-and the tests run on your laptop.** No CI runner, no agent, no Docker on the tester's
-machine, no administrator rights.
+TuringOne Community is designed for these environments. The platform runs on your
+own infrastructure, while UI tests are executed from an authorized execution
+environment using a lightweight TuringOne workspace.
+
+**No dedicated CI runner. No persistent execution agent. No Docker required in the
+execution environment.**
 
 | | |
 |---|---|
-| 🧠 **AI test generation** | Turn requirements and documents into UI test cases — one click |
-| 🖥️ **Zero-install execution** | Tests run locally through a script that ships with your workspace |
-| 🔒 **Fully self-hosted** | Your data, your database, your network. Nothing leaves your infrastructure except the LLM calls you configure |
-| 🔌 **Bring your own LLM** | Any OpenAI-compatible endpoint — Groq, OpenAI, vLLM, Ollama |
-| 📊 **Reports & traceability** | Screenshots, step-level results, requirement coverage |
-
----
+| 🧠 **AI-powered test generation** | Turn requirements and project documentation into UI test cases |
+| ⚡ **Runner-free execution** | Execute tests directly from the TuringOne workspace without deploying a dedicated CI runner |
+| 🔒 **Self-hosted platform** | Keep application data, configuration and execution control within your infrastructure. LLM connectivity remains configurable and can use either cloud or self-hosted providers |
+| 🔌 **Bring your own LLM** | Connect any OpenAI-compatible endpoint — cloud-hosted or self-hosted |
+| 📊 **Reports & traceability** | Track execution results, screenshots, test steps and requirement coverage |
 
 ## What you get
 
@@ -78,10 +87,11 @@ machine, no administrator rights.
 ## Architecture
 
 ```
-                 YOUR SERVER (Docker)                    YOUR LAPTOP
+            TURINGONE PLATFORM                    EXECUTION ENVIRONMENT
+                 (Docker)                        (TuringOne Workspace)
    ┌────────────────────────────────────────┐   ┌──────────────────────────┐
    │  frontend ── backend ── postgres       │   │  TuringOne workspace     │
-   │                 │        minio         │   │   (downloaded once)      │
+   │                 │        minio         │   │   (retrieved once)       │
    │                 │        redis         │   │                          │
    │              keycloak                  │   │  Run Turing One Tests    │
    └─────────────────┬──────────────────────┘   │        │                 │
@@ -97,9 +107,12 @@ machine, no administrator rights.
                      └──────────────────────────┴──────────────────────────┘
 ```
 
-The laptop **pulls** work from the server — it never listens on a port and never
-needs an inbound connection. That is what makes it work behind corporate proxies
-and locked-down desktops.
+The execution workspace **initiates all communication** with the TuringOne server.
+It retrieves pending executions, runs the selected tests, and sends progress and
+results back to the platform.
+
+The workspace does not listen on a port and does not require inbound connectivity,
+making it suitable for restricted corporate environments.
 
 ---
 
@@ -113,7 +126,7 @@ and locked-down desktops.
 | OS | Linux, macOS, Windows (WSL2) | — |
 
 For running tests locally you also need **Node.js 18+** and **Python 3.9+** on the
-tester's machine. Both are usually already present, and neither requires
+execution environment. Both are usually already present, and neither requires
 administrator rights.
 
 ---
@@ -181,8 +194,11 @@ everything the generator needs and tells you what is missing:
 - project text context
 - at least one valid environment
 - Test Management configuration
-- CI/CD configuration
 - at least one project document
+
+CI/CD configuration is also reported, but it is **optional**: local execution goes
+through the TuringOne workspace and requires neither Git nor a CI pipeline. Configure
+it only if you want TuringOne to interact with an external CI/CD system.
 
 <img src="docs/screenshots/03-preparation.png" alt="UI test preparation checklist" width="820">
 
@@ -204,11 +220,13 @@ Create a test plan, assign the test cases you want, and pick an environment.
 
 <img src="docs/screenshots/05-test-plan.png" alt="UI test plan" width="820">
 
-### 4 · Run tests on your machine
+### 4 · Execute tests from your environment
 
-This is where TuringOne Community differs from every CI-based tool.
+TuringOne Community does not require a dedicated CI runner for test execution.
+Instead, tests are launched from the TuringOne execution workspace inside your
+authorized environment.
 
-**Once per machine** — click **Download Workspace**. You get a 1 MB archive
+**Once per execution environment** — click **Download Workspace**. You get a 1 MB archive
 containing the Playwright framework, your tests, and a one-time pairing code.
 Unzip it and double-click:
 
@@ -401,8 +419,9 @@ docker compose exec postgres psql -U turingone -d community
   git-ignored.
 - The workspace token used by the local launcher is **per project, revocable, and
   stored only as a SHA-256 hash** server-side.
-- Nothing is written to a Git repository; the whole local-execution flow works
-  without Git, without Docker on the tester's machine, and without CI.
+- Nothing is written to a Git repository: the local-execution flow requires neither
+  Git, nor Docker in the execution environment, nor a CI pipeline. CI/CD settings
+  exist only for optional integration with external systems.
 
 Found a vulnerability? See [SECURITY.md](SECURITY.md).
 

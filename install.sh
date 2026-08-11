@@ -179,13 +179,18 @@ if [[ "$BOOT_EXIT" != "0" || "$COMPOSE_RC" != "0" ]]; then
 fi
 
 # ── Résumé ───────────────────────────────────────────────────────────────────
-source <(grep -E '^(FRONTEND_URL|TURINGONE_ADMIN_USERNAME|KEYCLOAK_PUBLIC_URL)=' .env | sed 's/^/export /')
+source <(grep -E '^(FRONTEND_URL|TURINGONE_ADMIN_USERNAME|TURINGONE_ADMIN_PASSWORD|KEYCLOAK_PUBLIC_URL|KEYCLOAK_USERNAME_ADMIN|KEYCLOAK_PASSWORD_ADMIN)=' .env | sed 's/^/export /')
 echo
 ok "TuringOne Community est installé ! 🎉"
 echo
 echo    "   🌐 Application  : ${FRONTEND_URL}"
-echo    "   👤 Connexion    : ${TURINGONE_ADMIN_USERNAME} / (TURINGONE_ADMIN_PASSWORD dans .env)"
+echo    "   👤 Utilisateur  : ${TURINGONE_ADMIN_USERNAME}"
+echo    "   🔑 Mot de passe : ${TURINGONE_ADMIN_PASSWORD}"
+echo
 echo    "   🔐 Console Keycloak (admin technique) : ${KEYCLOAK_PUBLIC_URL}"
+echo    "      ${KEYCLOAK_USERNAME_ADMIN} / ${KEYCLOAK_PASSWORD_ADMIN}"
+echo
+echo    "   Ces identifiants sont aussi dans le fichier .env (permissions 600)."
 echo
 echo    "   Premier démarrage du backend : téléchargement des modèles d'embeddings"
 echo    "   (quelques minutes). Suivre :  ${COMPOSE} logs -f backend"

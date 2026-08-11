@@ -15,6 +15,88 @@
 # pas se connecter à PostgreSQL / MinIO / RabbitMQ depuis l'extérieur.
 # ═════════════════════════════════════════════════════════════════════════════
 
+# ═════════════════════════════════════════════════════════════════════════════
+# Variables techniques FIGÉES — elles ne dépendent pas de l'installation et
+# n'ont donc pas à encombrer le .env. Le .env ne contient plus que les secrets
+# générés et le strict nécessaire (clé LLM, ports).
+# Pour surcharger l'une d'elles ponctuellement : ajoutez-la dans .env, elle
+# prendra le dessus (env_file est appliqué avant environment).
+# ═════════════════════════════════════════════════════════════════════════════
+x-turingone-static-env: &turingone-static-env
+  DOCKER_CONTAINER: "1"
+
+  # Chemins de travail dans le volume /data
+  DEST_FOLDER: /data/dest
+  RUN_FOLDER: /data/run
+  DOCUMENTS_FOLDER: /data/documents
+  HF_HOME: /data/hf-cache
+
+  # Journalisation
+  LOGGING_LEVEL: INFO
+  LOG_LEVEL: INFO
+  LOGGING_FILE: /data/app.log
+
+  # Limites d'exécution
+  LIMITS_MAX_TASKS: "1000"
+  LIMITS_MAX_WORKERS_PER_TENANT: "2"
+  LIMITS_MAX_ACTIVE_WORKERS: "4"
+  LIMITS_DEBUG: "False"
+
+  # Modèles d'embeddings (téléchargés au premier boot, mis en cache dans /data)
+  MODEL_NAME: sentence-transformers/all-mpnet-base-v2
+  EMBED_MODEL: sentence-transformers/all-MiniLM-L6-v2
+
+  # Tiers LLM auto-hébergés — ignorés dès que LLM_API_URL est renseignée
+  LLM_FAST_URL: https://api.openai.com/v1
+  LLM_FAST_MODEL: gpt-4o-mini
+  LLM_REASONING_URL: https://api.openai.com/v1
+  LLM_REASONING_MODEL: gpt-4o-mini
+  LLM_CODE_URL: https://api.openai.com/v1
+  LLM_CODE_MODEL: gpt-4o-mini
+  LLM_TIMEOUT: "120"
+  LLM_MAX_CONCURENT_REQUEST: "10"
+
+  # Vision et fallback LLM — optionnels, laissés vides
+  OPENAI_MODEL: gpt-4o-mini
+  OPENAI_VISION_MODEL: gpt-4o-mini
+  IA_SEC_SERVERS: ""
+  IA_SEC_MODEL: ""
+  IA_SEC_API_KEY: ""
+
+  # Enregistrement des utilisateurs Community
+  COMMUNITY_REGISTRY_ENABLED: "true"
+  # URL de base ; le chemin /public/TuringOne/executions/community/register est
+  # ajouté par le service. Le segment de tenant est FIXE côté API.
+  TURINGONE_PUBLIC_API_URL: https://api.app-turingone.com
+  # Endpoint public : aucune authentification n'est envoyée. Le token est
+  # conservé pour compatibilité mais n'est plus transmis.
+  COMMUNITY_REGISTRY_API_TOKEN: ""
+
+  # AWS — inutilisé (KMS local, stockage MinIO)
+  AWS_REGION: eu-west-1
+  AWS_ACCESS_KEY_ID: ""
+  AWS_SECRET_ACCESS_KEY: ""
+
+  # Jira global — les credentials par projet se configurent dans l'UI
+  JIRA_SERVER_URL: ""
+  JIRA_TOKEN: ""
+
+  # Neo4j — obsolète, remplacé par PostgreSQL
+  NEO4J_URI: ""
+  NEO4J_USER: ""
+  NEO4J_PASSWORD: ""
+
+  # RabbitMQ — le broker n'est plus déployé ; valeurs neutres pour satisfaire
+  # la configuration au démarrage (les producteurs deviennent des no-op).
+  RABBITMQ_ENABLED: "false"
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_USER: guest
+  RABBITMQ_PASSWORD: guest
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_SSL_ENABLED: "False"
+  RABBITMQ_VIRTUAL_HOST: "/"
+  WORKERS_RABBITMQ_PORT: "5672"
+
 name: turingone-community
 
 networks:
@@ -163,7 +245,7 @@ services:
     networks: [internal]     # ne parle qu'aux services internes — pas d'Internet
     env_file: .env
     environment:
-      DOCKER_CONTAINER: "1"
+      <<: *turingone-static-env
     command: ["python", "/bootstrap/bootstrap.py"]
     volumes:
       - ./bootstrap:/bootstrap:ro
@@ -186,7 +268,7 @@ services:
     networks: [edge, internal]
     env_file: .env
     environment:
-      DOCKER_CONTAINER: "1"
+      <<: *turingone-static-env
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:

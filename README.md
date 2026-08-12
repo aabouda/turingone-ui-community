@@ -4,7 +4,7 @@
 
 **Self-hosted AI-powered UI test automation.**
 
-`Generate` → `Prepare` → `Execute` → `Report`
+`Prepare` → `Generate` → + `Plan` → `Execute` → `Report`
 
 TuringOne Community generates and manages your UI tests centrally,
 while execution remains inside your authorized environment.
@@ -202,7 +202,7 @@ it only if you want TuringOne to interact with an external CI/CD system.
 
 <img src="docs/screenshots/03-preparation.png" alt="UI test preparation checklist" width="820">
 
-### 2 · Generate UI test cases
+### 2 · Generate UI tests with AI
 
 Click **Generating UI test cases** in the project menu. TuringOne runs a single
 job that produces the three UI categories — end-to-end, system and
@@ -214,13 +214,13 @@ title, test type and module.
 
 <img src="docs/screenshots/04-generation.png" alt="Generated UI test cases" width="820">
 
-### 3 · Build a test plan
+### 3 · Build your Test Plan
 
 Create a test plan, assign the test cases you want, and pick an environment.
 
 <img src="docs/screenshots/05-test-plan.png" alt="UI test plan" width="820">
 
-### 4 · Execute tests from your environment
+### 4 · Execute and analyze results
 
 TuringOne Community does not require a dedicated CI runner for test execution.
 Instead, tests are launched from the TuringOne execution workspace inside your

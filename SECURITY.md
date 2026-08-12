@@ -531,7 +531,7 @@ Security vulnerabilities should be reported privately to the TuringOne team.
 Security contact:
 
 ```text
-security@your-domain.example
+contact@getturingone.com
 ```
 
 Replace this address with the official TuringOne security email before publication.

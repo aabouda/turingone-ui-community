@@ -4,7 +4,7 @@
 
 **Self-hosted AI-powered UI test automation.**
 
-`Prepare` → `Generate` → + `Plan` → `Execute` → `Report`
+`Prepare` → `Generate` → `Plan` → `Execute` → `Report`
 
 TuringOne Community generates and manages your UI tests centrally,
 while execution remains inside your authorized environment.
@@ -32,9 +32,9 @@ while execution remains inside your authorized environment.
 - [First login](#first-login)
 - [Using it](#using-it)
   - [1 · Prepare your project](#1--prepare-your-project)
-  - [2 · Generate UI test cases](#2--generate-ui-test-cases)
-  - [3 · Build a test plan](#3--build-a-test-plan)
-  - [4 · Execute tests from your environment](#4--execute-tests-from-your-environment)
+  - [2 · Generate UI tests with AI](#2--generate-ui-tests-with-ai)
+  - [3 · Build your Test Plan](#3--build-your-test-plan)
+  - [4 · Execute and analyze results](#4--execute-and-analyze-results)
 - [Configuration](#configuration)
 - [Operations](#operations)
 - [Troubleshooting](#troubleshooting)

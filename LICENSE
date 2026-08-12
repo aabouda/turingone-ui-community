@@ -54,10 +54,19 @@ those licences.
 4. Data
 -------
 
-TuringOne Community Edition is self-hosted: your data remains in your own
-infrastructure. TuringOne does not access it. Where you configure an external
-service — such as a large language model provider — data you send to that
-service is governed by that provider's own terms.
+TuringOne Community Edition is primarily self-hosted and application data
+remains in your own infrastructure.
+
+During initial Community registration, limited account information may be
+transmitted to TuringOne for Community Edition registration and service
+management purposes.
+
+Where you configure external services, including large language model
+providers, information sent to those services is governed by the respective
+provider's terms and privacy policies. 
+
+Where you configure an external service — such as a large language model 
+provider — data you send to that service is governed by that provider's own terms.
 
 
 5. No warranty

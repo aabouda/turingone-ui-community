@@ -45,7 +45,7 @@ You may not:
 3. Third-party components
 -------------------------
 
-The Software runs alongside independent open-source components — including
+The Software runs alongside independent Public Community Edition components — including
 PostgreSQL, Keycloak, MinIO, Redis and Playwright — each distributed under its
 own licence. Nothing in this licence modifies your rights or obligations under
 those licences.

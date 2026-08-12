@@ -17,7 +17,7 @@ while execution remains inside your authorized environment.
 [![License](https://img.shields.io/badge/License-TuringOne%20Community-blue)](LICENSE)
 
 <img src="docs/screenshots/01-dashboard.png" alt="TuringOne Community — UI dashboard" width="880">
-![Downloads](https://img.shields.io/github/downloads/aabouda/turingone-ui-community/total)
+
 </div>
 
 ---

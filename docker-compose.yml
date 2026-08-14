@@ -243,7 +243,7 @@ services:
   # Utilise l'image backend (mêmes dépendances Python, même code modèle).
   # ───────────────────────────────────────────────────────────────────────────
   bootstrap:
-    image: ${TURINGONE_BACKEND_IMAGE:-ghcr.io/aabouda/turingone-backend-community:latest}
+    image: ${TURINGONE_BACKEND_IMAGE:-ghcr.io/GetTuringOne/turingone-backend-community:latest}
     restart: "no"
     networks: [internal]     # ne parle qu'aux services internes — pas d'Internet
     env_file: .env
@@ -266,7 +266,7 @@ services:
   # données inscriptibles limitées au volume /data.
   # ───────────────────────────────────────────────────────────────────────────
   backend:
-    image: ${TURINGONE_BACKEND_IMAGE:-ghcr.io/aabouda/turingone-backend-community:latest}
+    image: ${TURINGONE_BACKEND_IMAGE:-ghcr.io/GetTuringOne/turingone-backend-community:latest}
     restart: unless-stopped
     networks: [edge, internal]
     env_file: .env
@@ -295,7 +295,7 @@ services:
   # fonctionne pour n'importe quelle installation, sans rebuild.
   # ───────────────────────────────────────────────────────────────────────────
   frontend:
-    image: ${TURINGONE_FRONTEND_IMAGE:-ghcr.io/aabouda/turingone-frontend-community:latest}
+    image: ${TURINGONE_FRONTEND_IMAGE:-ghcr.io/GetTuringOne/turingone-frontend-community:latest}
     restart: unless-stopped
     networks: [edge]
     environment:

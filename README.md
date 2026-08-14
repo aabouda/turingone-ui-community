@@ -134,7 +134,7 @@ administrator rights.
 ## Quick start
 
 ```bash
-git clone https://github.com/aabouda/turingone-ui-community.git
+git clone https://github.com/GetTuringOne/turingone-ui-community.git
 cd turingone-ui-community
 ./install.sh
 ```
@@ -441,7 +441,7 @@ If you modify TuringOne UI Community and make the modified version available to 
 
 Please refer to the LICENSE file for the complete legal terms.
 
-Source code: <https://github.com/aabouda/turingone-ui-community>
+Source code: <https://github.com/GetTuringOne/turingone-ui-community>
 
 ### Scope of this repository
 

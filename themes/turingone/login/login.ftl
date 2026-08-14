@@ -1,3 +1,8 @@
+<#--
+    TuringOne UI Community
+    Copyright (C) 2026 TuringOne
+    SPDX-License-Identifier: AGPL-3.0-only
+-->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -212,6 +217,26 @@ button:hover {
     text-decoration: underline;
 }
 
+/* ===== LEGAL / OPEN SOURCE ===== */
+.legal {
+    position: absolute;
+    bottom: 16px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    z-index: 2;
+}
+.legal a {
+    color: rgba(255,255,255,0.78);
+    text-decoration: none;
+}
+.legal a:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
     .login-card { padding: 35px 25px; }
@@ -301,6 +326,14 @@ button:hover {
         </div>
         </#if>
 
+    </div>
+
+    <div class="legal">
+        <a href="https://github.com/aabouda/turingone-ui-community/blob/main/LICENSE"
+           target="_blank" rel="noopener noreferrer">Open Source License — AGPL-3.0-only</a>
+        &middot;
+        <a href="https://github.com/aabouda/turingone-ui-community"
+           target="_blank" rel="noopener noreferrer">Source Code</a>
     </div>
 </div>
 

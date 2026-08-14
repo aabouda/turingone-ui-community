@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# TuringOne UI Community
+# Copyright (C) 2026 TuringOne
+# SPDX-License-Identifier: AGPL-3.0-only
 # ═════════════════════════════════════════════════════════════════════════════
 # TuringOne Community — Installation en un clic (Linux / macOS / Git Bash)
 #
@@ -23,16 +26,16 @@ fail()  { echo -e "${RED}❌ $*${NC}"; exit 1; }
 
 # ── Plateforme ───────────────────────────────────────────────────────────────
 if [[ -n "${SUDO_USER:-}" ]]; then
-    warn "Lancé via sudo : ce n'est normalement PAS nécessaire (Docker Desktop, ou"
-    warn "utilisateur membre du groupe 'docker'). Les fichiers générés sont rendus à"
-    warn "${SUDO_USER}, mais lancez plutôt ./install.sh sans sudo."
+    warn "Running through sudo: this is normally NOT required (Docker Desktop, or a"
+    warn "user in the 'docker' group). Generated files are handed back to"
+    warn "${SUDO_USER}, but prefer running ./install.sh without sudo."
 fi
 
 case "$(uname -s)" in
     MINGW*|MSYS*|CYGWIN*)
-        warn "Windows détecté (Git Bash). Ce script peut fonctionner, mais la sortie"
-        warn "de Docker s'affiche mal dans certains terminaux (MinTTY)."
-        warn "👉 Recommandé sous Windows :  PowerShell →  .\\install.ps1"
+        warn "Windows detected (Git Bash). This script can work, but Docker output"
+        warn "renders badly in some terminals (MinTTY)."
+        warn "👉 Recommended on Windows:  PowerShell →  .\\install.ps1"
         ;;
 esac
 
@@ -42,21 +45,21 @@ esac
 ENGINE=""; COMPOSE=""
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     ENGINE="docker"; COMPOSE="docker compose"
-    docker info >/dev/null 2>&1 || fail "Le démon Docker ne répond pas — démarrez Docker (Desktop)"
+    docker info >/dev/null 2>&1 || fail "The Docker daemon is not responding — start Docker (Desktop)"
 elif command -v podman >/dev/null 2>&1; then
-    podman info >/dev/null 2>&1 || fail "Podman ne répond pas (machine podman démarrée ?)"
+    podman info >/dev/null 2>&1 || fail "Podman is not responding (is the podman machine started?)"
     if podman compose version >/dev/null 2>&1; then
         ENGINE="podman"; COMPOSE="podman compose"
-        warn "Podman détecté. Fonctionne avec le provider 'docker-compose' (recommandé)."
-        warn "Le provider python 'podman-compose' gère mal 'depends_on: service_completed_successfully' :"
-        warn "si le backend démarre avant la fin du bootstrap, relancez :  podman compose up -d"
+        warn "Podman detected. Works with the 'docker-compose' provider (recommended)."
+        warn "The python 'podman-compose' provider handles 'depends_on: service_completed_successfully' badly:"
+        warn "if the backend starts before the bootstrap finishes, re-run:  podman compose up -d"
     else
-        fail "Podman trouvé mais 'podman compose' indisponible — installez docker-compose ou podman-compose"
+        fail "Podman found but 'podman compose' is unavailable — install docker-compose or podman-compose"
     fi
 else
-    fail "Ni Docker ni Podman trouvés : https://docs.docker.com/get-docker/"
+    fail "Neither Docker nor Podman found: https://docs.docker.com/get-docker/"
 fi
-info "Moteur : ${ENGINE} (${COMPOSE})"
+info "Engine: ${ENGINE} (${COMPOSE})"
 
 # ── Bits d'exécution des scripts montés ──────────────────────────────────────
 # postgres/init/*.sh est monté dans /docker-entrypoint-initdb.d : l'image
@@ -78,9 +81,9 @@ set_var() {  # set_var NOM VALEUR — remplace la ligne NOM=... dans .env
 }
 
 if [[ -f .env ]]; then
-    warn ".env existant conservé (secrets préservés). Supprimez-le pour repartir de zéro."
+    warn "Existing .env kept (secrets preserved). Delete it to start from scratch."
 else
-    info "Génération du fichier .env avec des secrets aléatoires…"
+    info "Generating the .env file with random secrets…"
     cp .env.example .env
 
     DB_PASSWORD="$(gen_secret)"
@@ -101,26 +104,26 @@ else
     if [[ -n "${SUDO_USER:-}" ]]; then
         chown "$SUDO_USER" .env 2>/dev/null || true
     fi
-    ok ".env généré (permissions 600)"
-    warn "SAUVEGARDEZ ce fichier : TURINGONE_MASTER_KEY est indispensable pour déchiffrer vos données."
+    ok ".env generated (permissions 600)"
+    warn "BACK UP this file: TURINGONE_MASTER_KEY is required to decrypt your data."
 fi
 
 if grep -q "CHANGE-ME" .env; then
-    warn "Pensez à renseigner VLLM_API_KEY dans .env (clé OpenAI ou serveur LLM local) —"
-    warn "sans elle, les fonctionnalités IA ne répondront pas."
+    warn "Remember to set VLLM_API_KEY in .env (OpenAI key or local LLM server) —"
+    warn "without it, the AI features will not respond."
 fi
 
-[[ "${1:-}" == "--env-only" ]] && { ok "Fichier .env prêt. Lancez : ${COMPOSE} up -d"; exit 0; }
+[[ "${1:-}" == "--env-only" ]] && { ok "The .env file is ready. Run: ${COMPOSE} up -d"; exit 0; }
 
 # ── Étape 1/3 : telechargement des images (la partie LONGUE) ─────────────────────────
-info "Étape 1/3 — Téléchargement des images…"
-info "  ⏳ Le PREMIER téléchargement représente environ 2 Go :"
-info "     comptez 5 à 15 min selon la connexion. La progression s'affiche ci-dessous."
-$COMPOSE pull || fail "Le téléchargement des images a échoué (voir la sortie ci-dessus)"
-ok "Images téléchargées"
+info "Step 1/3 — Downloading the images…"
+info "  ⏳ The FIRST download is around 2 GB:"
+info "     allow 5 to 15 min depending on your connection. Progress is shown below."
+$COMPOSE pull || fail "Image download failed (see the output above)"
+ok "Images downloaded"
 
 # ── Étape 2/3 : démarrage de la stack ────────────────────────────────────────
-info "Étape 2/3 — Démarrage des services…"
+info "Step 2/3 — Starting the services…"
 # Ne pas mourir ici (set -e) : backend dépend du bootstrap, donc un échec de
 # provisioning fait échouer 'up' — on veut alors afficher les logs bootstrap.
 COMPOSE_RC=0
@@ -137,23 +140,23 @@ if [[ "$COMPOSE_RC" != "0" ]]; then
             psql -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'keycloak'" \
             2>/dev/null | grep -q '^1$'; then
         echo
-        warn "Le cluster PostgreSQL existe mais le rôle 'keycloak' est absent :"
-        warn "l'initialisation (postgres/init/01-init-databases.sh) n'a pas abouti."
-        warn "L'init n'est jouée qu'une fois, sur un volume VIDE — il faut le recréer."
-        warn "Les commandes ci-dessous SUPPRIMENT les données PostgreSQL existantes"
-        warn "(le .env et sa master key, eux, sont conservés) :"
+        warn "The PostgreSQL cluster exists but the 'keycloak' role is missing:"
+        warn "initialisation (postgres/init/01-init-databases.sh) did not complete."
+        warn "Init only runs once, on an EMPTY volume — it has to be recreated."
+        warn "The commands below DELETE the existing PostgreSQL data"
+        warn "(your .env and its master key are preserved):"
         echo "    ${COMPOSE} down"
         echo "    ${ENGINE} volume rm turingone-community_pgdata"
         echo "    ./install.sh"
-        fail "Initialisation PostgreSQL incomplète — voir ci-dessus."
+        fail "Incomplete PostgreSQL initialisation — see above."
     fi
 fi
 
 # ── Étape 3/3 : provisioning automatique (bootstrap) ─────────────────────────
-info "Étape 3/3 — Provisioning automatique (bases, Keycloak, buckets)…"
+info "Step 3/3 — Automatic provisioning (databases, Keycloak, buckets)…"
 BOOT_CID="$($COMPOSE ps -aq bootstrap 2>/dev/null || true)"
 if [[ -z "$BOOT_CID" ]]; then
-    fail "Conteneur bootstrap introuvable — le démarrage a échoué (code $COMPOSE_RC). Logs : ${COMPOSE} logs"
+    fail "Bootstrap container not found — startup failed (code $COMPOSE_RC). Logs: ${COMPOSE} logs"
 fi
 
 # Logs du bootstrap en DIRECT pendant l'attente (arrière-plan, coupé à la fin)
@@ -166,7 +169,7 @@ while [[ "$($ENGINE inspect -f '{{.State.Running}}' "$BOOT_CID" 2>/dev/null)" ==
     ELAPSED=$((ELAPSED + 5))
     # Battement de cœur discret toutes les 30 s si les logs sont silencieux
     if (( ELAPSED % 30 == 0 )); then
-        info "…provisioning en cours (${ELAPSED}s) — services : $($COMPOSE ps --format '{{.Service}}={{.State}}' 2>/dev/null | tr '\n' ' ')"
+        info "…provisioning in progress (${ELAPSED}s) — services: $($COMPOSE ps --format '{{.Service}}={{.State}}' 2>/dev/null | tr '\n' ' ')"
     fi
 done
 kill "$LOGS_PID" >/dev/null 2>&1 || true
@@ -175,24 +178,24 @@ BOOT_EXIT="$($ENGINE inspect -f '{{.State.ExitCode}}' "$BOOT_CID" 2>/dev/null ||
 if [[ "$BOOT_EXIT" != "0" || "$COMPOSE_RC" != "0" ]]; then
     echo
     $COMPOSE logs bootstrap 2>/dev/null | tail -40
-    fail "Le bootstrap a échoué (voir logs ci-dessus) : ${COMPOSE} logs bootstrap"
+    fail "Bootstrap failed (see the logs above): ${COMPOSE} logs bootstrap"
 fi
 
 # ── Résumé ───────────────────────────────────────────────────────────────────
 source <(grep -E '^(FRONTEND_URL|TURINGONE_ADMIN_USERNAME|TURINGONE_ADMIN_PASSWORD|KEYCLOAK_PUBLIC_URL|KEYCLOAK_USERNAME_ADMIN|KEYCLOAK_PASSWORD_ADMIN)=' .env | sed 's/^/export /')
 echo
-ok "TuringOne Community est installé ! 🎉"
+ok "TuringOne Community is installed! 🎉"
 echo
-echo    "   🌐 Application  : ${FRONTEND_URL}"
-echo    "   👤 Utilisateur  : ${TURINGONE_ADMIN_USERNAME}"
-echo    "   🔑 Mot de passe : ${TURINGONE_ADMIN_PASSWORD}"
+echo    "   🌐 Application : ${FRONTEND_URL}"
+echo    "   👤 Username    : ${TURINGONE_ADMIN_USERNAME}"
+echo    "   🔑 Password    : ${TURINGONE_ADMIN_PASSWORD}"
 echo
-echo    "   🔐 Console Keycloak (admin technique) : ${KEYCLOAK_PUBLIC_URL}"
+echo    "   🔐 Keycloak console (technical admin): ${KEYCLOAK_PUBLIC_URL}"
 echo    "      ${KEYCLOAK_USERNAME_ADMIN} / ${KEYCLOAK_PASSWORD_ADMIN}"
 echo
-echo    "   Ces identifiants sont aussi dans le fichier .env (permissions 600)."
+echo    "   These credentials are also stored in the .env file (permissions 600)."
 echo
-echo    "   Premier démarrage du backend : téléchargement des modèles d'embeddings"
-echo    "   (quelques minutes). Suivre :  ${COMPOSE} logs -f backend"
+echo    "   First backend startup: it downloads the embedding models"
+echo    "   (a few minutes). Follow with:  ${COMPOSE} logs -f backend"
 echo
-warn    "Sauvegardez le fichier .env (master key de chiffrement) avec vos backups !"
+warn    "Back up the .env file (encryption master key) together with your backups!"

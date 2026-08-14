@@ -1,3 +1,6 @@
+# TuringOne UI Community
+# Copyright (C) 2026 TuringOne
+# SPDX-License-Identifier: AGPL-3.0-only
 # =============================================================================
 # TuringOne Community - Installation en un clic (Windows PowerShell)
 #
@@ -21,12 +24,12 @@ function Fail($msg)  { Write-Host "[X]  $msg" -ForegroundColor Red; exit 1 }
 
 # --- Prerequis ---------------------------------------------------------------
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    Fail "Docker n'est pas installe : https://docs.docker.com/get-docker/"
+    Fail "Docker is not installed: https://docs.docker.com/get-docker/"
 }
 docker compose version *> $null
-if ($LASTEXITCODE -ne 0) { Fail "Docker Compose v2 requis (commande 'docker compose')" }
+if ($LASTEXITCODE -ne 0) { Fail "Docker Compose v2 is required (the 'docker compose' command)" }
 docker info *> $null
-if ($LASTEXITCODE -ne 0) { Fail "Le demon Docker ne repond pas - demarrez Docker Desktop" }
+if ($LASTEXITCODE -ne 0) { Fail "The Docker daemon is not responding - start Docker Desktop" }
 
 # --- Generation de secrets ----------------------------------------------------
 function New-RandomBytes([int]$n) {
@@ -54,11 +57,19 @@ function Set-EnvVar([string]$Name, [string]$Value) {
     $content = $content -replace "(?m)^$([regex]::Escape($Name))=.*$", "$Name=$Value"
     [System.IO.File]::WriteAllText($path, $content, $script:Utf8NoBom)
 }
+# Relit une valeur du .env pour le resume final. Retourne "" si la cle est
+# absente : sans ce garde, $ErrorActionPreference = "Stop" ferait echouer tout
+# le script sur .Matches[0] alors que l'installation, elle, a reussi.
+function Get-EnvValue([string]$Name) {
+    $match = Select-String -Path .env -Pattern "^$([regex]::Escape($Name))=(.*)$" | Select-Object -First 1
+    if ($match) { return $match.Matches[0].Groups[1].Value }
+    return ""
+}
 
 if (Test-Path .env) {
-    Warn ".env existant conserve (secrets preserves). Supprimez-le pour repartir de zero."
+    Warn "Existing .env kept (secrets preserved). Delete it to start from scratch."
 } else {
-    Info "Generation du fichier .env avec des secrets aleatoires..."
+    Info "Generating the .env file with random secrets..."
     Copy-Item .env.example .env
 
     $dbPassword = New-Secret
@@ -76,36 +87,36 @@ if (Test-Path .env) {
     # Equivalent du chmod 600 : acces restreint a l'utilisateur courant
     icacls .env /inheritance:r /grant:r "$($env:USERNAME):(R,W)" *> $null
 
-    Ok ".env genere (acces restreint a $($env:USERNAME))"
-    Warn "SAUVEGARDEZ ce fichier : TURINGONE_MASTER_KEY est indispensable pour dechiffrer vos donnees."
+    Ok ".env generated (access restricted to $($env:USERNAME))"
+    Warn "BACK UP this file: TURINGONE_MASTER_KEY is required to decrypt your data."
 }
 
 $envContent = Get-Content .env -Raw
 if ($envContent -match "CHANGE-ME") {
-    Warn "Pensez a renseigner VLLM_API_KEY dans .env (cle OpenAI ou serveur LLM local)."
+    Warn "Remember to set VLLM_API_KEY in .env (OpenAI key or local LLM server)."
 }
 
-if ($EnvOnly) { Ok "Fichier .env pret. Lancez : docker compose up -d"; exit 0 }
+if ($EnvOnly) { Ok "The .env file is ready. Run: docker compose up -d"; exit 0 }
 
 # --- Etape 1/3 : telechargement des images (la partie LONGUE) ---------------------------
-Info "Etape 1/3 - Téléchargement des images..."
-Info "  Le PREMIER telechargement represente environ 2 Go :"
-Info "  comptez 10 a 30 min selon la connexion. La progression s'affiche ci-dessous."
+Info "Step 1/3 - Downloading the images..."
+Info "  The FIRST download is around 2 GB:"
+Info "  allow 10 to 30 min depending on your connection. Progress is shown below."
 docker compose pull
-if ($LASTEXITCODE -ne 0) { Fail "Le telechargement des images a echoue (voir la sortie ci-dessus)" }
-Ok "Images construites"
+if ($LASTEXITCODE -ne 0) { Fail "Image download failed (see the output above)" }
+Ok "Images downloaded"
 
 # --- Etape 2/3 : demarrage ------------------------------------------------------
-Info "Etape 2/3 - Demarrage des services..."
+Info "Step 2/3 - Starting the services..."
 # Ne pas echouer ici : backend depend du bootstrap, donc un echec de provisioning
 # fait echouer 'up' — on veut alors afficher les logs du bootstrap.
 docker compose up -d
 $composeRc = $LASTEXITCODE
 
 # --- Etape 3/3 : provisioning automatique (bootstrap) ---------------------------
-Info "Etape 3/3 - Provisioning automatique (bases, Keycloak, buckets)..."
+Info "Step 3/3 - Automatic provisioning (databases, Keycloak, buckets)..."
 $bootCid = (docker compose ps -aq bootstrap | Select-Object -First 1)
-if (-not $bootCid) { Fail "Conteneur bootstrap introuvable - le demarrage a echoue (code $composeRc). Logs : docker compose logs" }
+if (-not $bootCid) { Fail "Bootstrap container not found - startup failed (code $composeRc). Logs: docker compose logs" }
 
 $elapsed = 0
 while ((docker inspect -f '{{.State.Running}}' $bootCid) -eq "true") {
@@ -113,30 +124,38 @@ while ((docker inspect -f '{{.State.Running}}' $bootCid) -eq "true") {
     $elapsed += 5
     if ($elapsed % 15 -eq 0) {
         # Affiche l'avancement reel du bootstrap toutes les 15 s
-        Write-Host "--- provisioning en cours (${elapsed}s) - dernieres lignes du bootstrap :" -ForegroundColor DarkGray
+        Write-Host "--- provisioning in progress (${elapsed}s) - last lines from the bootstrap:" -ForegroundColor DarkGray
         docker compose logs --tail 3 bootstrap 2>$null | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
     }
 }
 $bootExit = [int](docker inspect -f '{{.State.ExitCode}}' $bootCid)
 if ($bootExit -ne 0 -or $composeRc -ne 0) {
     docker compose logs bootstrap | Select-Object -Last 40
-    Fail "Le bootstrap a echoue (voir logs ci-dessus) : docker compose logs bootstrap"
+    Fail "Bootstrap failed (see the logs above): docker compose logs bootstrap"
 }
-Ok "Provisioning termine"
+Ok "Provisioning complete"
 
 # --- Resume ---------------------------------------------------------------------
-$frontendUrl  = (Select-String -Path .env -Pattern '^FRONTEND_URL=(.*)$').Matches[0].Groups[1].Value
-$adminUser    = (Select-String -Path .env -Pattern '^TURINGONE_ADMIN_USERNAME=(.*)$').Matches[0].Groups[1].Value
-$keycloakUrl  = (Select-String -Path .env -Pattern '^KEYCLOAK_PUBLIC_URL=(.*)$').Matches[0].Groups[1].Value
+$frontendUrl   = Get-EnvValue "FRONTEND_URL"
+$adminUser     = Get-EnvValue "TURINGONE_ADMIN_USERNAME"
+$adminPassword = Get-EnvValue "TURINGONE_ADMIN_PASSWORD"
+$keycloakUrl   = Get-EnvValue "KEYCLOAK_PUBLIC_URL"
+$kcAdminUser   = Get-EnvValue "KEYCLOAK_USERNAME_ADMIN"
+$kcAdminPass   = Get-EnvValue "KEYCLOAK_PASSWORD_ADMIN"
 
 Write-Host ""
-Ok "TuringOne Community est installe !"
+Ok "TuringOne Community is installed!"
 Write-Host ""
-Write-Host "   Application  : $frontendUrl"
-Write-Host "   Connexion    : $adminUser / (TURINGONE_ADMIN_PASSWORD dans .env)"
-Write-Host "   Console Keycloak (admin technique) : $keycloakUrl"
+Write-Host "   Application : $frontendUrl"
+Write-Host "   Username    : $adminUser"
+Write-Host "   Password    : $adminPassword"
 Write-Host ""
-Write-Host "   Premier demarrage du backend : telechargement des modeles d'embeddings"
-Write-Host "   (quelques minutes). Suivre :  docker compose logs -f backend"
+Write-Host "   Keycloak console (technical admin): $keycloakUrl"
+Write-Host "      $kcAdminUser / $kcAdminPass"
 Write-Host ""
-Warn "Sauvegardez le fichier .env (master key de chiffrement) avec vos backups !"
+Write-Host "   These credentials are also stored in the .env file (restricted access)."
+Write-Host ""
+Write-Host "   First backend startup: it downloads the embedding models"
+Write-Host "   (a few minutes). Follow with:  docker compose logs -f backend"
+Write-Host ""
+Warn "Back up the .env file (encryption master key) together with your backups!"

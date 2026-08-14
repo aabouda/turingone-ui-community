@@ -14,7 +14,7 @@ while execution remains inside your authorized environment.
 [![Docker](https://img.shields.io/badge/Docker-Compose%20v2-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Playwright](https://img.shields.io/badge/Playwright-Cucumber-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
 [![Keycloak](https://img.shields.io/badge/Auth-Keycloak-4D4D4D?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
-[![License](https://img.shields.io/badge/License-TuringOne%20Community-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-AGPL%20v3-blue)](LICENSE)
 
 <img src="docs/screenshots/01-dashboard.png" alt="TuringOne Community — UI dashboard" width="880">
 
@@ -429,10 +429,52 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md).
 
 ## License
 
-TuringOne Community Edition — see [LICENSE](LICENSE).
+TuringOne UI Community is licensed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`).
 
-Free to install and use inside your organisation, including commercially.
-Offering it to third parties as a hosted service requires a separate agreement.
+See the [LICENSE](LICENSE) file for the complete license terms.
+
+Copyright © 2026 TuringOne
+
+### Source code and modifications
+
+If you modify TuringOne UI Community and make the modified version available to users over a network, the GNU Affero General Public License v3.0 may require you to make the corresponding source code of that modified version available to those users.
+
+Please refer to the LICENSE file for the complete legal terms.
+
+Source code: <https://github.com/aabouda/turingone-ui-community>
+
+### Scope of this repository
+
+This repository contains the deployment configuration for TuringOne Community —
+the Compose file, the installation scripts, the bootstrap provisioning and the
+Keycloak login theme. These files are covered by the AGPL-3.0-only license above.
+
+The `backend` and `frontend` services are pulled as pre-built container images
+(`TURINGONE_BACKEND_IMAGE` / `TURINGONE_FRONTEND_IMAGE`). Those images are
+distributed separately and carry their own terms; the license of this repository
+does not by itself determine the terms applying to them.
+
+### Third-party components
+
+TuringOne Community runs alongside independent components — including
+PostgreSQL, Keycloak, MinIO, Redis and Playwright — each distributed under its
+own license. Nothing here modifies your rights or obligations under those
+licenses.
+
+### Trademarks
+
+The AGPL-3.0-only license covers the copyright in the software. It does not by
+itself grant rights to the TuringOne name, logos or branding — see
+[TRADEMARKS.md](TRADEMARKS.md).
+
+### Data handling
+
+TuringOne Community is primarily self-hosted, and application data remains in
+your own infrastructure. During initial Community registration, limited account
+information may be transmitted to TuringOne for registration and service
+management purposes. Where you configure an external service — such as a large
+language model provider — data you send to that service is governed by that
+provider's own terms and privacy policy.
 
 <div align="center">
 <sub>Built with FastAPI · Vue 3 · Playwright · Keycloak · PostgreSQL + pgvector</sub>

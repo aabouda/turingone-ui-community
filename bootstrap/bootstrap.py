@@ -549,37 +549,21 @@ def keycloak_setup() -> None:
             )
     log.info("✅ Rôles administrateur affectés à '%s'", ADMIN_USERNAME)
 
-    ensure_company_attribute(kc)
+    ensure_profile_attributes(kc)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-def ensure_company_attribute(kc: "KeycloakAdmin") -> None:
-    """
-    Déclare l'attribut `company` dans le User Profile du realm.
-
-    Depuis Keycloak 24, le User Profile déclaratif est actif par défaut et
-    `unmanagedAttributePolicy` est absent : tout attribut NON déclaré est
-    silencieusement rejeté à l'écriture. Sans cette déclaration, le champ
-    Company saisi à la première connexion serait perdu sans erreur.
-
-    Idempotent : l'attribut n'est ajouté que s'il manque, et les attributs
-    existants (username, email, firstName, lastName) sont préservés.
-    """
-    path = f"/realms/{TENANT_NAME}/users/profile"
-
-    r = kc.call("GET", path, ok=(200, 404))
-    if r.status_code == 404:
-        log.warning("User Profile indisponible sur ce Keycloak — attribut 'company' non déclaré")
-        return
-
-    profile = r.json()
-    attributes = profile.get("attributes", [])
-
-    if any(a.get("name") == "company" for a in attributes):
-        log.info("ℹ️  Attribut 'company' déjà déclaré")
-        return
-
-    attributes.append({
+# Attributs du User Profile ajoutés par TuringOne Community.
+#
+# `required` n'est VOLONTAIREMENT pas positionné sur les consentements : le
+# rendre obligatoire côté realm ferait échouer toute écriture Admin API sur un
+# utilisateur qui n'a pas encore accepté (y compris nos propres appels de
+# synchronisation). L'obligation est portée là où elle a un sens :
+#   - le formulaire login-update-profile.ftl (attribut HTML `required`)
+#   - UserProfileUpdateSchema côté backend
+#   - le service d'enregistrement, qui refuse d'inscrire sans acceptation
+PROFILE_ATTRIBUTES = [
+    {
         "name": "company",
         "displayName": "Company",
         "validations": {"length": {"min": 1, "max": 255}},
@@ -587,11 +571,61 @@ def ensure_company_attribute(kc: "KeycloakAdmin") -> None:
         "permissions": {"view": ["admin", "user"], "edit": ["admin", "user"]},
         "multivalued": False,
         "group": "user-metadata",
-    })
+    },
+    {
+        "name": "termsAccepted",
+        "displayName": "Terms of Service and DPA accepted",
+        "validations": {"options": {"options": ["true", "false"]}},
+        "permissions": {"view": ["admin", "user"], "edit": ["admin", "user"]},
+        "multivalued": False,
+        "group": "user-metadata",
+    },
+    {
+        "name": "newsletterOptIn",
+        "displayName": "Newsletter opt-in",
+        "validations": {"options": {"options": ["true", "false"]}},
+        "permissions": {"view": ["admin", "user"], "edit": ["admin", "user"]},
+        "multivalued": False,
+        "group": "user-metadata",
+    },
+]
+
+
+def ensure_profile_attributes(kc: "KeycloakAdmin") -> None:
+    """
+    Déclare les attributs TuringOne dans le User Profile du realm.
+
+    Depuis Keycloak 24, le User Profile déclaratif est actif par défaut et
+    `unmanagedAttributePolicy` est absent : tout attribut NON déclaré est
+    silencieusement rejeté à l'écriture. Sans cette déclaration, la société et
+    les consentements saisis à la première connexion seraient perdus sans
+    erreur — le pire des cas pour une preuve de consentement RGPD.
+
+    Idempotent : seuls les attributs manquants sont ajoutés, les attributs
+    existants (username, email, firstName, lastName) sont préservés.
+    """
+    path = f"/realms/{TENANT_NAME}/users/profile"
+
+    r = kc.call("GET", path, ok=(200, 404))
+    if r.status_code == 404:
+        log.warning("User Profile indisponible sur ce Keycloak — attributs non déclarés")
+        return
+
+    profile = r.json()
+    attributes = profile.get("attributes", [])
+    existing = {a.get("name") for a in attributes}
+
+    added = [a["name"] for a in PROFILE_ATTRIBUTES if a["name"] not in existing]
+    if not added:
+        log.info("ℹ️  Attributs du profil déjà déclarés (%s)", ", ".join(
+            a["name"] for a in PROFILE_ATTRIBUTES))
+        return
+
+    attributes.extend(a for a in PROFILE_ATTRIBUTES if a["name"] not in existing)
     profile["attributes"] = attributes
 
     kc.call("PUT", path, json=profile, ok=(200, 204))
-    log.info("✅ Attribut 'company' déclaré dans le User Profile")
+    log.info("✅ Attributs déclarés dans le User Profile : %s", ", ".join(added))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

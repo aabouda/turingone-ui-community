@@ -1,3 +1,8 @@
+<#--
+    TuringOne UI Community
+    Copyright (C) 2026 TuringOne
+    SPDX-License-Identifier: AGPL-3.0-only
+-->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -73,6 +78,65 @@ button {
     font-size: 16px;
 }
 
+/* ── Consentements RGPD ──────────────────────────────────────────────────
+   Aligné à gauche : une case à cocher centrée est illisible. Chaque
+   consentement est SÉPARÉ — les regrouper en une seule case invaliderait
+   le consentement marketing au sens du RGPD (art. 7).                    */
+.consent {
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.consent-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 18px 0 8px;
+}
+
+.consent label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #334155;
+    cursor: pointer;
+}
+
+.consent input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 1px 0 0;
+    flex-shrink: 0;
+    accent-color: #0f9d7a;
+    cursor: pointer;
+}
+
+.consent a {
+    color: #006B54;
+    font-weight: 600;
+}
+
+.required-mark {
+    color: #b91c1c;
+    font-weight: 700;
+}
+
+.privacy-note {
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #64748b;
+    margin: 6px 0 20px;
+}
+
+.privacy-note a {
+    color: #006B54;
+}
+
 .alert {
     background: rgba(220, 38, 38, 0.10);
     border: 1px solid rgba(220, 38, 38, 0.35);
@@ -136,6 +200,53 @@ button {
                        autocomplete="organization"
                        required>
             </div>
+
+            <#--
+                Les deux consentements sont des attributs déclarés dans le User
+                Profile du realm par bootstrap.py, comme `company`.
+
+                Une case NON cochée n'est pas envoyée par le navigateur :
+                l'absence de l'attribut vaut donc « false ». Le backend
+                normalise en conséquence — pas de champ caché, qui rendrait la
+                valeur ambiguë côté Keycloak.
+            -->
+            <div class="consent">
+                <label>
+                    <input type="checkbox"
+                           name="user.attributes.termsAccepted"
+                           value="true"
+                           <#if (user.attributes.termsAccepted!'') == 'true'>checked</#if>
+                           required>
+                    <span>
+                        I agree to the
+                        <a href="https://getturingone.com/terms-of-service/" target="_blank" rel="noopener">Terms of Service</a>
+                        and
+                        <a href="https://getturingone.com/data-processing-agreement/" target="_blank" rel="noopener">Data Processing Agreement (DPA)</a>.
+                        <span class="required-mark">*</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="consent">
+                <div class="consent-title">Marketing Communications</div>
+                <label>
+                    <input type="checkbox"
+                           name="user.attributes.newsletterOptIn"
+                           value="true"
+                           <#if (user.attributes.newsletterOptIn!'') == 'true'>checked</#if>>
+                    <span>
+                        I would like to learn more about testing, industry best
+                        practices, and how to better use TuringOne. Please add me
+                        to the newsletter!
+                    </span>
+                </label>
+            </div>
+
+            <p class="privacy-note">
+                We use your details to create your account and, if you opt in, to
+                send you our newsletter. You can unsubscribe at any time. See our
+                <a href="https://getturingone.com/privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a>.
+            </p>
 
             <button type="submit">Save and continue</button>
         </form>

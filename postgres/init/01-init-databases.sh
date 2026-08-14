@@ -1,4 +1,7 @@
 #!/bin/bash
+# TuringOne UI Community
+# Copyright (C) 2026 TuringOne
+# SPDX-License-Identifier: AGPL-3.0-only
 # ═════════════════════════════════════════════════════════════════════════════
 # TuringOne Community — Initialisation PostgreSQL
 #

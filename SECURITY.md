@@ -496,7 +496,7 @@ Before making a TuringOne Community installation available to users, verify the 
 - [ ] Backup restoration has been tested.
 - [ ] Sensitive logs are protected.
 - [ ] Container images come from a trusted registry.
-- [ ] The Community Edition license is included with the distribution.
+- [ ] The `LICENSE` file (AGPL-3.0-only) is included with the distribution.
 - [ ] The operating system and Docker environment are up to date.
 
 ---
@@ -540,10 +540,10 @@ Replace this address with the official TuringOne security email before publicati
 
 ## License
 
-TuringOne Community is distributed under the license included in this repository.
+TuringOne Community is distributed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`).
 
 Please refer to the [`LICENSE`](LICENSE) file for the applicable terms and conditions.
 
 ---
 
-© TuringOne. All rights reserved.
+Copyright © 2026 TuringOne — licensed under AGPL-3.0-only.

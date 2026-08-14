@@ -198,9 +198,13 @@ Approval of a Pull Request is required before it can be merged into `main`.
 
 ## License
 
+TuringOne Community is licensed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`).
+
 By contributing to TuringOne Community, you agree that your contributions will be distributed under the license applicable to this repository.
 
-Please review the repository's `LICENSE` file before contributing.
+You keep the copyright on your contributions. There is no contributor license agreement and no copyright assignment.
+
+Please review the repository's [`LICENSE`](LICENSE) file before contributing.
 
 ## Thank You
 

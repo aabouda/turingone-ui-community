@@ -1,0 +1,33 @@
+# TuringOne UI Community
+# Copyright (C) 2026 TuringOne
+# SPDX-License-Identifier: AGPL-3.0-only
+# =============================================================================
+# Normalisation des fins de ligne — indispensable au fonctionnement Windows.
+#
+# Git for Windows utilise core.autocrlf=true par defaut : sans ce fichier, tout
+# script est converti en CRLF au checkout. Un .sh en CRLF monte dans un
+# conteneur Linux echoue sur « /bin/bash^M: bad interpreter » — l'init
+# PostgreSQL est alors abandonnee, le cluster reste vide, et Keycloak boucle
+# indefiniment sur « role "keycloak" does not exist ».
+# =============================================================================
+
+# Par defaut : LF dans le depot ET dans la copie de travail, sur les 3 OS.
+* text=auto eol=lf
+
+# Fichiers executes ou lus DANS les conteneurs Linux — LF obligatoire.
+*.sh            text eol=lf
+*.py            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.ftl           text eol=lf
+*.properties    text eol=lf
+*.css           text eol=lf
+.env.example    text eol=lf
+
+# Script Windows — CRLF natif.
+*.ps1           text eol=crlf
+
+# Binaires — aucune conversion de fin de ligne.
+*.png           binary
+*.ico           binary
+*.svg           binary

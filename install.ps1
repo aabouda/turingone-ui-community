@@ -66,6 +66,23 @@ function Get-EnvValue([string]$Name) {
     return ""
 }
 
+# --- Fins de ligne des scripts montes dans les conteneurs ---------------------
+# Git for Windows utilise core.autocrlf=true par defaut : les .sh sont alors
+# convertis en CRLF au checkout. Monte dans le conteneur PostgreSQL, un tel
+# script echoue sur "/bin/bash^M: bad interpreter" — l'init est abandonnee et
+# Keycloak boucle ensuite sur "role keycloak does not exist".
+# .gitattributes protege les nouveaux clones ; ceci repare ceux deja existants.
+$initDir = Join-Path $PSScriptRoot "postgres/init"
+if (Test-Path $initDir) {
+    Get-ChildItem -Path $initDir -Filter *.sh -File | ForEach-Object {
+        $raw = [System.IO.File]::ReadAllText($_.FullName)
+        if ($raw.Contains("`r`n")) {
+            [System.IO.File]::WriteAllText($_.FullName, $raw.Replace("`r`n", "`n"), $script:Utf8NoBom)
+            Warn "CRLF line endings converted to LF: $($_.Name)"
+        }
+    }
+}
+
 if (Test-Path .env) {
     Warn "Existing .env kept (secrets preserved). Delete it to start from scratch."
 } else {

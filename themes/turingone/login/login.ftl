@@ -329,10 +329,10 @@ button:hover {
     </div>
 
     <div class="legal">
-        <a href="https://github.com/aabouda/turingone-ui-community/blob/main/LICENSE"
+        <a href="https://github.com/GetTuringOne/turingone-ui-community/blob/main/LICENSE"
            target="_blank" rel="noopener noreferrer">Open Source License — AGPL-3.0-only</a>
         &middot;
-        <a href="https://github.com/aabouda/turingone-ui-community"
+        <a href="https://github.com/GetTuringOne/turingone-ui-community"
            target="_blank" rel="noopener noreferrer">Source Code</a>
     </div>
 </div>

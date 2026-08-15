@@ -69,6 +69,20 @@ info "Engine: ${ENGINE} (${COMPOSE})"
 # Les archives ZIP/tar perdent les permissions : on les rétablit à chaque run.
 chmod +x postgres/init/*.sh 2>/dev/null || true
 
+# ── Fins de ligne des scripts montés ─────────────────────────────────────────
+# Git for Windows (core.autocrlf=true) et les archives ZIP convertissent les
+# scripts en CRLF. Un .sh en CRLF monté dans le conteneur PostgreSQL échoue sur
+# « /bin/bash^M: bad interpreter » : l'init est abandonnée et Keycloak boucle
+# ensuite sur « role "keycloak" does not exist ».
+# .gitattributes protège les nouveaux clones ; ceci répare ceux déjà existants.
+for f in postgres/init/*.sh; do
+    [[ -f "$f" ]] || continue
+    if grep -q $'\r' "$f" 2>/dev/null; then
+        sed -i.bak 's/\r$//' "$f" && rm -f "$f.bak"
+        warn "CRLF line endings converted to LF: $f"
+    fi
+done
+
 # ── Génération de secrets ────────────────────────────────────────────────────
 gen_secret()   { openssl rand -hex 24; }                                    # 48 hex chars
 gen_keyid()    { echo "turingone$(openssl rand -hex 8)"; }                  # access key id
